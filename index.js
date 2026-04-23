@@ -16,13 +16,14 @@ connectDB();
 
 // Middlewares
 app.use(cors({
-  origin: ['http://localhost:5173'], // Vite dev
+  origin: "*",
   credentials: true
 }));
+
 app.use(express.json());
 app.use('/images', express.static('images'));
 
-// Health check (útil para debug/deploy)
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, message: 'API funcionando 🚀' });
 });
@@ -33,12 +34,12 @@ app.use('/api/usuarios', userRoutes);
 app.use('/api/personajes', personajeRoutes);
 app.use('/api/logs', logsRoutes);
 
-// 404 handler
+// 404
 app.use((req, res) => {
   res.status(404).json({ ok: false, message: 'Ruta no encontrada' });
 });
 
-// Error handler global
+// Error handler
 app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).json({ ok: false, message: 'Error del servidor' });
@@ -46,6 +47,7 @@ app.use((err, req, res, next) => {
 
 // Server
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`🔥 API corriendo en http://localhost:${PORT}`);
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🔥 API corriendo en puerto ${PORT}`);
 });
