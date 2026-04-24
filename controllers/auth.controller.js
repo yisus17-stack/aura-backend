@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const Usuario = require('../models/Usuario');
+const { registrarLog } = require('../utils/logger');
 
 const login = async (req, res) => {
   const { email, password } = req.body;
@@ -9,13 +10,15 @@ const login = async (req, res) => {
     const usuario = await Usuario.findOne({ email });
 
     if (!usuario) {
-      return res.status(401).json({ error: "Credenciales inválidas" });
+      registrarLog('LOGIN', email, 'error', 'Usuario no encontrado');
+      return res.status(401).json({ error: 'Credenciales invalidas' });
     }
 
     const match = await bcrypt.compare(password, usuario.password);
 
     if (!match) {
-      return res.status(401).json({ error: "Credenciales inválidas" });
+      registrarLog('LOGIN', usuario.email, 'error', 'Password incorrecto');
+      return res.status(401).json({ error: 'Credenciales invalidas' });
     }
 
     const token = jwt.sign(
@@ -24,9 +27,11 @@ const login = async (req, res) => {
         email: usuario.email,
         rol: usuario.rol
       },
-      process.env.JWT_SECRET || "secreto_super_pro",
-      { expiresIn: "1h" }
+      process.env.JWT_SECRET || 'secreto_super_pro',
+      { expiresIn: '1h' }
     );
+
+    registrarLog('LOGIN', usuario.email, 'success', 'Inicio de sesion correcto');
 
     res.json({
       nombre: usuario.nombre,
@@ -34,9 +39,9 @@ const login = async (req, res) => {
       rol: usuario.rol,
       token
     });
-
   } catch (error) {
-    res.status(500).json({ error: "Error servidor" });
+    registrarLog('LOGIN', email, 'error', 'Error servidor');
+    res.status(500).json({ error: 'Error servidor' });
   }
 };
 
@@ -47,7 +52,8 @@ const register = async (req, res) => {
     const existe = await Usuario.findOne({ email });
 
     if (existe) {
-      return res.status(400).json({ error: "El usuario ya existe" });
+      registrarLog('REGISTER', email, 'warning', 'Intento de registro duplicado');
+      return res.status(400).json({ error: 'El usuario ya existe' });
     }
 
     const hash = await bcrypt.hash(password, 10);
@@ -56,17 +62,19 @@ const register = async (req, res) => {
       nombre,
       email,
       password: hash,
-      rol: "user"
+      rol: 'user'
     });
 
     await nuevoUsuario.save();
 
-    res.json({
-      message: "Usuario creado correctamente"
-    });
+    registrarLog('REGISTER', nuevoUsuario.email, 'success', 'Usuario creado correctamente');
 
+    res.json({
+      message: 'Usuario creado correctamente'
+    });
   } catch (error) {
-    res.status(500).json({ error: "Error servidor" });
+    registrarLog('REGISTER', email, 'error', 'Error servidor');
+    res.status(500).json({ error: 'Error servidor' });
   }
 };
 
