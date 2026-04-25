@@ -1,9 +1,6 @@
 const mongoose = require('mongoose');
 
-/**
- * En Vercel, las funciones se "congelan". Usar global previene que cada 
- * petición abra una nueva conexión (lo que saturaría tu Atlas).
- */
+// Configuración de caché para evitar múltiples conexiones en Vercel
 let cached = global.mongoose;
 
 if (!cached) {
@@ -11,36 +8,42 @@ if (!cached) {
 }
 
 const connectDB = async () => {
-  // 1. Si ya estamos conectados, regresamos la conexión existente
+  // 1. Reutilizar conexión si existe
   if (cached.conn) {
-    console.log('🟢 Reutilizando conexión de MongoDB (Cache)');
+    console.log('🟢 Usando conexión existente (caché)');
     return cached.conn;
   }
 
-  // 2. Si no hay una promesa de conexión, la creamos
+  // 2. Si no hay promesa de conexión, crearla con lógica de reintento
   if (!cached.promise) {
     const opts = {
-      bufferCommands: false, // ¡CRÍTICO! Si no hay conexión, falla rápido en vez de esperar
-      serverSelectionTimeoutMS: 8000,   // 8 segundos para encontrar el servidor
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 10000, // Aumentado a 10s para dar margen
       socketTimeoutMS: 45000,
-      family: 4,                        // Fuerza IPv4 (a veces Vercel tarda con IPv6)
-      maxPoolSize: 1,                   // En Serverless, 1 es suficiente por instancia
+      family: 4,                      // Forzar IPv4 para evitar errores de DNS en Atlas
+      maxPoolSize: 1,                 // Optimizado para Serverless
     };
 
-    console.log('⏳ Iniciando nueva conexión a MongoDB...');
-    cached.promise = mongoose.connect(process.env.MONGODB_URI, opts).then((mongoose) => {
-      return mongoose;
-    });
+    console.log('⏳ Estableciendo nueva conexión con MongoDB Atlas...');
+
+    // Lógica de reintento: Si falla, limpia la promesa para que el próximo request intente de nuevo
+    cached.promise = mongoose.connect(process.env.MONGODB_URI, opts)
+      .then((mongooseInstance) => {
+        return mongooseInstance;
+      })
+      .catch((err) => {
+        cached.promise = null; // Limpiar caché si falla
+        console.error('🔴 Error crítico al conectar a Mongo:', err.message);
+        throw err;
+      });
   }
 
   try {
-    // 3. Esperamos a que la promesa se resuelva
     cached.conn = await cached.promise;
-    console.log('🟢 Mongo conectado exitosamente');
-  } catch (error) {
-    cached.promise = null; // Si falló, permitimos reintentar en la próxima petición
-    console.log('🔴 Error en conexión MongoDB:', error.message);
-    throw error; 
+    console.log('🟢 Mongo conectado con éxito');
+  } catch (e) {
+    cached.conn = null;
+    throw e;
   }
 
   return cached.conn;
