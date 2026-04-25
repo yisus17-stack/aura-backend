@@ -82,7 +82,7 @@ app.use(cors(corsOptions));
 
 // 2. CONFIGURACIÓN DE IMÁGENES FINAL
 // Esto busca las fotos en: backend/public/images
-app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
+app.use('/public/images', express.static(path.join(__dirname, 'public', 'images')));
 
 // Health check
 app.get('/api/health', (req, res) => {
