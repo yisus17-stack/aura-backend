@@ -85,8 +85,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // --- 🖼️ SERVIR IMÁGENES ESTÁTICAS ---
-// Ahora Mike Wazowski vive en: https://aura-backend-puce.vercel.app/public/images/mike.png
-app.use('/public/images', express.static(path.join(__dirname, 'public', 'images')));
+// Ahora las imágenes viven en: https://aura-backend-puce.vercel.app/images/mike-wazowski.png
+app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
 
 // Health check
 app.get('/api/health', (req, res) => {
