@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const path = require('path'); // <--- 1. Importamos path
+const path = require('path'); 
 
 const connectDB = require('./config/db');
 
@@ -17,11 +17,15 @@ const app = express();
 // DB
 connectDB();
 
-// Trust proxy for Vercel and other proxies
+// Trust proxy for Vercel
 app.set('trust proxy', 1);
 
 // Middlewares
-app.use(helmet({ crossOriginResourcePolicy: false }));
+// IMPORTANTE: Cambiamos crossOriginResourcePolicy a false para que deje ver las imágenes
+app.use(helmet({ 
+  crossOriginResourcePolicy: false,
+  crossOriginEmbedderPolicy: false 
+}));
 app.use(express.json());
 
 // Sanitización básica manual
@@ -43,6 +47,7 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Configuración de Orígenes
 const envOrigins = [
   process.env.FRONTEND_URL,
   process.env.ALLOWED_ORIGINS
@@ -55,7 +60,6 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'https://auraa-nu.vercel.app',
-  'https://auraa-jgxs2sm3z-yisus-projects-babd5615.vercel.app',
   ...envOrigins
 ].filter(Boolean);
 
@@ -80,8 +84,8 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// 2. CONFIGURACIÓN DE IMÁGENES FINAL
-// Esto busca las fotos en: backend/public/images
+// --- 🖼️ SERVIR IMÁGENES ESTÁTICAS ---
+// Ahora Mike Wazowski vive en: https://aura-backend-puce.vercel.app/public/images/mike.png
 app.use('/public/images', express.static(path.join(__dirname, 'public', 'images')));
 
 // Health check
@@ -108,8 +112,6 @@ app.use((err, req, res, next) => {
   if (origin && allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   }
 
   res.status(500).json({ ok: false, message: 'Error del servidor', details: err.message });
