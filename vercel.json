@@ -14,13 +14,12 @@
   },
   "routes": [
     {
-      "src": "/images/(.*)",
-      "headers": { "cache-control": "public, max-age=86400" },
-      "continue": true
-    },
-    {
       "src": "/api/(.*)",
       "dest": "index.js"
+    },
+    {
+      "src": "/images/(.*)",
+      "dest": "/images/$1"
     },
     {
       "src": "/(.*)",
