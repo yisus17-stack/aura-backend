@@ -40,7 +40,7 @@ const limiter = rateLimit({
 app.use(limiter);
 
 app.use(cors({
-  origin: true, 
+  origin: 'https://auraa-nu.vercel.app', // <--- TU URL REAL DEL FRONTEND
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -71,7 +71,9 @@ app.use((req, res) => {
 // Error handler global
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(500).json({ ok: false, message: 'Error del servidor' });
+  // Importante: Vercel necesita que el error también devuelva cabeceras CORS
+  res.header("Access-Control-Allow-Origin", "https://auraa-nu.vercel.app");
+  res.status(500).json({ ok: false, message: 'Error del servidor', details: err.message });
 });
 
 const PORT = process.env.PORT || 3001;
