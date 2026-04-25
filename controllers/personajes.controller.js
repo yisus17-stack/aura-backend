@@ -2,24 +2,14 @@ const jwt = require('jsonwebtoken');
 const Personaje = require('../models/Personaje');
 const { registrarLog } = require('../utils/logger');
 
+// Tu función auxiliar está excelente, la mantenemos
 const getEmailFromRequest = (req) => {
-  if (req.user?.email) {
-    return req.user.email;
-  }
-
+  if (req.user?.email) return req.user.email;
   const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return 'desconocido';
-  }
-
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return 'desconocido';
   try {
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'secreto_super_pro'
-    );
-
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secreto_super_pro');
     return decoded.email || 'desconocido';
   } catch (error) {
     return 'desconocido';
@@ -27,59 +17,56 @@ const getEmailFromRequest = (req) => {
 };
 
 const getPersonajes = async (req, res) => {
-  const data = await Personaje.find();
-  registrarLog('GET_PERSONAJES', getEmailFromRequest(req), 'success');
-  res.json(data);
+  try {
+    const data = await Personaje.find();
+    registrarLog('GET_PERSONAJES', getEmailFromRequest(req), 'success');
+    res.json(data);
+  } catch (error) {
+    registrarLog('GET_PERSONAJES', getEmailFromRequest(req), 'error', error.message);
+    res.status(500).json({ message: 'Error al obtener personajes' });
+  }
 };
 
 const getPersonajeById = async (req, res) => {
   try {
     const data = await Personaje.findById(req.params.id);
-
     if (!data) {
-      registrarLog(
-        'GET_PERSONAJE_DETAIL',
-        getEmailFromRequest(req),
-        'warning',
-        `Personaje no encontrado: ${req.params.id}`
-      );
+      registrarLog('GET_PERSONAJE_DETAIL', getEmailFromRequest(req), 'warning', `No encontrado: ${req.params.id}`);
       return res.status(404).json({ message: 'No existe el personaje' });
     }
-
-    registrarLog(
-      'GET_PERSONAJE_DETAIL',
-      getEmailFromRequest(req),
-      'success',
-      `Detalle consultado: ${data.nombre}`
-    );
-
+    registrarLog('GET_PERSONAJE_DETAIL', getEmailFromRequest(req), 'success', `Consultado: ${data.nombre}`);
     res.json(data);
   } catch (error) {
-    registrarLog(
-      'GET_PERSONAJE_DETAIL',
-      getEmailFromRequest(req),
-      'error',
-      `Error consultando personaje: ${req.params.id}`
-    );
+    registrarLog('GET_PERSONAJE_DETAIL', getEmailFromRequest(req), 'error', error.message);
     res.status(500).json({ message: 'Error servidor' });
   }
 };
 
 const createPersonaje = async (req, res) => {
-  const nuevo = new Personaje(req.body);
-  await nuevo.save();
-
-  registrarLog('CREATE_PERSONAJE', req.user.email, 'success');
-
-  res.json(nuevo);
+  try {
+    const nuevo = new Personaje(req.body);
+    await nuevo.save();
+    // Usamos getEmailFromRequest para evitar errores de undefined
+    registrarLog('CREATE_PERSONAJE', getEmailFromRequest(req), 'success', `Creado: ${nuevo.nombre}`);
+    res.status(201).json(nuevo);
+  } catch (error) {
+    registrarLog('CREATE_PERSONAJE', getEmailFromRequest(req), 'error', error.message);
+    res.status(400).json({ message: 'Error al crear personaje', detalle: error.message });
+  }
 };
 
 const deletePersonaje = async (req, res) => {
-  await Personaje.findByIdAndDelete(req.params.id);
-
-  registrarLog('DELETE_PERSONAJE', req.user.email, 'success');
-
-  res.json({ mensaje: 'Eliminado' });
+  try {
+    const eliminado = await Personaje.findByIdAndDelete(req.params.id);
+    if (!eliminado) {
+      return res.status(404).json({ message: 'No se encontró el personaje para eliminar' });
+    }
+    registrarLog('DELETE_PERSONAJE', getEmailFromRequest(req), 'success', `ID eliminado: ${req.params.id}`);
+    res.json({ mensaje: 'Eliminado correctamente' });
+  } catch (error) {
+    registrarLog('DELETE_PERSONAJE', getEmailFromRequest(req), 'error', error.message);
+    res.status(500).json({ message: 'Error al eliminar' });
+  }
 };
 
 module.exports = {

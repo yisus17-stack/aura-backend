@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path'); // <--- 1. Importamos path
 
 const connectDB = require('./config/db');
 
@@ -17,10 +18,9 @@ const app = express();
 connectDB();
 
 // Middlewares
-// Seguridad Básica S-SDLC
-app.use(helmet({ crossOriginResourcePolicy: false })); // Para poder cargar imágenes si es necesario
+app.use(helmet({ crossOriginResourcePolicy: false })); 
 
-// Sanitización básica manual para req.body (prevenir inyecciones NoSQL simples)
+// Sanitización básica manual
 app.use((req, res, next) => {
   if (req.body) {
     const sanitizeStr = (str) => typeof str === 'string' ? str.replace(/\$/g, '') : str;
@@ -31,22 +31,28 @@ app.use((req, res, next) => {
   next();
 });
 
-// Rate limiting (evitar fuerza bruta y DDoS)
+// Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 150, // Límite de peticiones por IP
-  message: { error: 'Demasiadas peticiones desde esta IP, por favor intenta de nuevo más tarde.' }
+  windowMs: 15 * 60 * 1000, 
+  max: 150, 
+  message: { error: 'Demasiadas peticiones desde esta IP.' }
 });
 app.use(limiter);
 
 app.use(cors({
-  origin: ['http://localhost:5173'], // Vite dev
-  credentials: true
+  origin: true, 
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
-app.use('/images', express.static('images'));
 
-// Health check (útil para debug/deploy)
+app.use(express.json());
+
+// 2. CONFIGURACIÓN DE IMÁGENES FINAL
+// Esto busca las fotos en: backend/public/images
+app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
+
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, message: 'API funcionando 🚀' });
 });
@@ -68,7 +74,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ ok: false, message: 'Error del servidor' });
 });
 
-// Server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🔥 API corriendo en http://localhost:${PORT}`);
