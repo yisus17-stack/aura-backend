@@ -17,8 +17,12 @@ const app = express();
 // DB
 connectDB();
 
+// Trust proxy for Vercel and other proxies
+app.set('trust proxy', 1);
+
 // Middlewares
-app.use(helmet({ crossOriginResourcePolicy: false })); 
+app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(express.json());
 
 // Sanitización básica manual
 app.use((req, res, next) => {
@@ -61,9 +65,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('/:path(.*)', cors(corsOptions));
-
-app.use(express.json());
 
 // 2. CONFIGURACIÓN DE IMÁGENES FINAL
 // Esto busca las fotos en: backend/public/images
