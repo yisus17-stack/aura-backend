@@ -22,8 +22,9 @@ const getPersonajes = async (req, res) => {
     registrarLog('GET_PERSONAJES', getEmailFromRequest(req), 'success');
     res.json(data);
   } catch (error) {
+    console.error('🔴 Error en GET_PERSONAJES:', error.message);
     registrarLog('GET_PERSONAJES', getEmailFromRequest(req), 'error', error.message);
-    res.status(500).json({ message: 'Error al obtener personajes' });
+    res.status(500).json({ message: 'Error al obtener personajes', error: error.message });
   }
 };
 
@@ -37,8 +38,9 @@ const getPersonajeById = async (req, res) => {
     registrarLog('GET_PERSONAJE_DETAIL', getEmailFromRequest(req), 'success', `Consultado: ${data.nombre}`);
     res.json(data);
   } catch (error) {
+    console.error('🔴 Error en GET_PERSONAJE_DETAIL:', error.message);
     registrarLog('GET_PERSONAJE_DETAIL', getEmailFromRequest(req), 'error', error.message);
-    res.status(500).json({ message: 'Error servidor' });
+    res.status(500).json({ message: 'Error servidor', error: error.message });
   }
 };
 
@@ -50,8 +52,9 @@ const createPersonaje = async (req, res) => {
     registrarLog('CREATE_PERSONAJE', getEmailFromRequest(req), 'success', `Creado: ${nuevo.nombre}`);
     res.status(201).json(nuevo);
   } catch (error) {
+    console.error('🔴 Error en CREATE_PERSONAJE:', error.message);
     registrarLog('CREATE_PERSONAJE', getEmailFromRequest(req), 'error', error.message);
-    res.status(400).json({ message: 'Error al crear personaje', detalle: error.message });
+    res.status(400).json({ message: 'Error al crear personaje', error: error.message });
   }
 };
 
@@ -64,8 +67,9 @@ const deletePersonaje = async (req, res) => {
     registrarLog('DELETE_PERSONAJE', getEmailFromRequest(req), 'success', `ID eliminado: ${req.params.id}`);
     res.json({ mensaje: 'Eliminado correctamente' });
   } catch (error) {
+    console.error('🔴 Error en DELETE_PERSONAJE:', error.message);
     registrarLog('DELETE_PERSONAJE', getEmailFromRequest(req), 'error', error.message);
-    res.status(500).json({ message: 'Error al eliminar' });
+    res.status(500).json({ message: 'Error al eliminar', error: error.message });
   }
 };
 

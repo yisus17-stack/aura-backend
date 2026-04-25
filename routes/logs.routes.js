@@ -7,7 +7,8 @@ router.get('/', async (req, res) => {
     const logs = await obtenerLogs(req.query.limit);
     res.json(logs);
   } catch (error) {
-    res.status(500).json({ error: 'No se pudieron obtener los logs' });
+    console.error('🔴 Error en GET_LOGS:', error.message);
+    res.status(500).json({ error: 'No se pudieron obtener los logs', message: error.message });
   }
 });
 
