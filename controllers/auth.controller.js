@@ -1,10 +1,20 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose'); // Importamos mongoose para checar el estado
 const Usuario = require('../models/Usuario');
 const { registrarLog } = require('../utils/logger');
 
 const login = async (req, res) => {
   const { email, password } = req.body;
+
+  // --- BLINDAJE PARA VERCEL ---
+  // Si no hay conexión, respondemos rápido para evitar el timeout del navegador
+  if (mongoose.connection.readyState !== 1) {
+    console.error('🔴 LOGIN FALLIDO: No hay conexión a MongoDB');
+    return res.status(503).json({ 
+      error: 'La base de datos no está lista. Reintenta en unos segundos.' 
+    });
+  }
 
   try {
     const usuario = await Usuario.findOne({ email });
@@ -42,12 +52,19 @@ const login = async (req, res) => {
   } catch (error) {
     console.error('🔴 Error en LOGIN:', error.message);
     registrarLog('LOGIN', email, 'error', `Error servidor: ${error.message}`);
-    res.status(500).json({ error: 'Error servidor' });
+    res.status(500).json({ error: 'Error servidor', details: error.message });
   }
 };
 
 const register = async (req, res) => {
   const { nombre, email, password } = req.body;
+
+  // --- BLINDAJE PARA VERCEL ---
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ 
+      error: 'Servicio temporalmente no disponible (DB)' 
+    });
+  }
 
   try {
     const existe = await Usuario.findOne({ email });
@@ -76,7 +93,7 @@ const register = async (req, res) => {
   } catch (error) {
     console.error('🔴 Error en REGISTER:', error.message);
     registrarLog('REGISTER', email, 'error', `Error servidor: ${error.message}`);
-    res.status(500).json({ error: 'Error servidor' });
+    res.status(500).json({ error: 'Error servidor', details: error.message });
   }
 };
 

@@ -23,9 +23,9 @@ const connectDB = async () => {
 
     // Configuración OPTIMIZADA para Vercel serverless
     await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 60000,     // 60s para encontrar servidor (Vercel es lento)
+      serverSelectionTimeoutMS: 5000,     // 60s para encontrar servidor (Vercel es lento)
       socketTimeoutMS: 60000,               // 60s para operaciones socket
-      connectTimeoutMS: 60000,              // 60s para conectar
+      connectTimeoutMS: 10000,              // 60s para conectar
       retryWrites: true,                    // Reintentar escrituras automáticamente
       retryReads: true,                     // Reintentar lecturas automáticamente
       maxPoolSize: 5,                       // REDUCIDO: Vercel instancias son efímeras
