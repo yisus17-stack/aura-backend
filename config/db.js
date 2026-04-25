@@ -6,10 +6,11 @@ const connectDB = () => {
   if (supabase) return supabase;
 
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_KEY;
+  // Ajustado para que coincida con tu .env
+  const key = process.env.SUPABASE_ANON_KEY; 
 
   if (!url || !key) {
-    console.error('⚠️ SUPABASE_URL o SUPABASE_KEY no configurados.');
+    console.error('⚠️ SUPABASE_URL o SUPABASE_ANON_KEY no configurados.');
     return null;
   }
 
@@ -20,7 +21,7 @@ const connectDB = () => {
     },
   });
 
-  console.log('🟢 Supabase cliente inicializado');
+  console.log('🟢 Cliente de Supabase inicializado correctamente');
   return supabase;
 };
 

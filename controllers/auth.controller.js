@@ -15,7 +15,7 @@ const login = async (req, res) => {
   try {
     const { data: usuario, error } = await supabase
       .from('usuarios')
-      .select('id, nombre, email, password, rol')
+      .select('id, nombre, email, password_hash, rol') // <-- Cambiado a password_hash y rol
       .eq('email', email)
       .single();
 
@@ -28,7 +28,8 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Credenciales invalidas' });
     }
 
-    const match = await bcrypt.compare(password, usuario.password);
+    // Comparamos usando password_hash que es el nombre en tu tabla
+    const match = await bcrypt.compare(password, usuario.password_hash);
 
     if (!match) {
       registrarLog('LOGIN', usuario.email, 'error', 'Password incorrecto');
@@ -39,7 +40,7 @@ const login = async (req, res) => {
       {
         id: usuario.id,
         email: usuario.email,
-        rol: usuario.rol
+        rol: usuario.rol // <-- Usando rol
       },
       process.env.JWT_SECRET || 'secreto_super_pro',
       { expiresIn: '1h' }
@@ -93,8 +94,8 @@ const register = async (req, res) => {
         {
           nombre,
           email,
-          password: hash,
-          rol: 'user'
+          password_hash: hash, // <-- Cambiado a password_hash
+          rol: 'user'          // <-- Cambiado a rol
         }
       ])
       .select('id, nombre, email, rol')

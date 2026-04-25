@@ -3,10 +3,10 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const path = require('path'); 
 
 const connectDB = require('./config/db');
 
+// Rutas de Aura
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/usuarios.routes');
 const personajeRoutes = require('./routes/personajes.routes');
@@ -14,21 +14,19 @@ const logsRoutes = require('./routes/logs.routes');
 
 const app = express();
 
-// DB
+// Inicializamos Supabase
 connectDB();
 
-// Trust proxy for Vercel
 app.set('trust proxy', 1);
 
-// Middlewares
-// IMPORTANTE: Cambiamos crossOriginResourcePolicy a false para que deje ver las imágenes
+// --- SEGURIDAD ---
 app.use(helmet({ 
   crossOriginResourcePolicy: false,
   crossOriginEmbedderPolicy: false 
 }));
 app.use(express.json());
 
-// Sanitización básica manual
+// Sanitización contra inyecciones
 app.use((req, res, next) => {
   if (req.body) {
     const sanitizeStr = (str) => typeof str === 'string' ? str.replace(/\$/g, '') : str;
@@ -39,89 +37,55 @@ app.use((req, res, next) => {
   next();
 });
 
-// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 150,
-  message: { error: 'Demasiadas peticiones desde esta IP.' }
+  message: { error: 'Demasiadas peticiones a Aura. Intenta más tarde.' }
 });
 app.use(limiter);
 
-// Configuración de Orígenes
-const envOrigins = [
-  process.env.FRONTEND_URL,
-  process.env.ALLOWED_ORIGINS
-]
-  .filter(Boolean)
-  .flatMap((item) => item.split(',').map((origin) => origin.trim()))
-  .filter(Boolean);
-
+// --- CORS ---
 const allowedOrigins = [
   'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'https://auraa-nu.vercel.app',
-  ...envOrigins
+  'https://auraa-nu.vercel.app', // Tu frontend principal
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [])
 ].filter(Boolean);
 
-const corsOptions = {
+app.use(cors({
   origin: (origin, callback) => {
-    const originAllowed =
-      !origin ||
-      allowedOrigins.includes(origin) ||
-      /^https:\/\/auraa-[\w-]+\.vercel\.app$/.test(origin);
-
-    if (originAllowed) {
+    const isAllowed = !origin || allowedOrigins.includes(origin) || /^https:\/\/auraa-.*\.vercel\.app$/.test(origin);
+    if (isAllowed) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error('Bloqueado por CORS - Proyecto Aura'));
     }
   },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200,
-};
+  credentials: true
+}));
 
-app.use(cors(corsOptions));
-
-// --- 🖼️ SERVIR IMÁGENES ESTÁTICAS ---
-// Ahora las imágenes viven en: https://aura-backend-puce.vercel.app/images/mike-wazowski.png
-app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
-
-// Health check
+// --- RUTAS ---
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, message: 'API funcionando 🚀' });
+  res.json({ ok: true, status: '🌌 AURA API Online' });
 });
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', userRoutes);
 app.use('/api/personajes', personajeRoutes);
 app.use('/api/logs', logsRoutes);
 
-// 404 handler
 app.use((req, res) => {
-  res.status(404).json({ ok: false, message: 'Ruta no encontrada' });
+  res.status(404).json({ ok: false, message: 'Ruta no encontrada en Aura.' });
 });
 
-// Error handler global
 app.use((err, req, res, next) => {
-  console.error(err);
-  const origin = req.headers.origin;
-
-  if (origin && allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Credentials', 'true');
-  }
-
-  res.status(500).json({ ok: false, message: 'Error del servidor', details: err.message });
+  console.error('🔴 ERROR AURA:', err.stack);
+  res.status(500).json({ ok: false, message: 'Error interno del servidor' });
 });
 
 const PORT = process.env.PORT || 3001;
-
 if (require.main === module) {
   app.listen(PORT, () => {
-    console.log(`🔥 API corriendo en http://localhost:${PORT}`);
+    console.log(`🌌 Proyecto AURA corriendo en puerto ${PORT}`);
   });
 }
 
