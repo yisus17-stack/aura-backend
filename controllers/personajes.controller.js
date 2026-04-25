@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const supabaseClient = require('../config/db');
 const { registrarLog } = require('../utils/logger');
 
-// Tu función auxiliar está excelente, la mantenemos
+// Función auxiliar para identificar al usuario en los logs
 const getEmailFromRequest = (req) => {
   if (req.user?.email) return req.user.email;
   const authHeader = req.headers.authorization;
@@ -76,9 +76,16 @@ const createPersonaje = async (req, res) => {
   }
 
   try {
+    // Mapeo preventivo: si el frontend manda "imagen", lo pasamos a "imagen_url"
+    const nuevoPersonaje = { ...req.body };
+    if (nuevoPersonaje.imagen && !nuevoPersonaje.imagen_url) {
+      nuevoPersonaje.imagen_url = nuevoPersonaje.imagen;
+      delete nuevoPersonaje.imagen;
+    }
+
     const { data, error } = await supabase
       .from('personajes')
-      .insert([req.body])
+      .insert([nuevoPersonaje])
       .select('*')
       .single();
 
@@ -101,10 +108,12 @@ const deletePersonaje = async (req, res) => {
   }
 
   try {
+    // En Supabase/PostgREST para delete() con .single(), necesitamos asegurar que el registro exista
     const { data, error } = await supabase
       .from('personajes')
       .delete()
       .eq('id', req.params.id)
+      .select()
       .single();
 
     if (error && error.code === 'PGRST116') {
