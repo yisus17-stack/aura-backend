@@ -40,7 +40,8 @@ const login = async (req, res) => {
       token
     });
   } catch (error) {
-    registrarLog('LOGIN', email, 'error', 'Error servidor');
+    console.error('🔴 Error en LOGIN:', error.message);
+    registrarLog('LOGIN', email, 'error', `Error servidor: ${error.message}`);
     res.status(500).json({ error: 'Error servidor' });
   }
 };
@@ -73,7 +74,8 @@ const register = async (req, res) => {
       message: 'Usuario creado correctamente'
     });
   } catch (error) {
-    registrarLog('REGISTER', email, 'error', 'Error servidor');
+    console.error('🔴 Error en REGISTER:', error.message);
+    registrarLog('REGISTER', email, 'error', `Error servidor: ${error.message}`);
     res.status(500).json({ error: 'Error servidor' });
   }
 };
