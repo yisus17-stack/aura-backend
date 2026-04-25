@@ -33,18 +33,35 @@ app.use((req, res, next) => {
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
-  max: 150, 
+  windowMs: 15 * 60 * 1000,
+  max: 150,
   message: { error: 'Demasiadas peticiones desde esta IP.' }
 });
 app.use(limiter);
 
-app.use(cors({
-  origin: 'https://auraa-nu.vercel.app', // <--- TU URL REAL DEL FRONTEND
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://auraa-nu.vercel.app',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
+app.options('/:path(.*)', cors(corsOptions));
 
 app.use(express.json());
 
@@ -71,8 +88,15 @@ app.use((req, res) => {
 // Error handler global
 app.use((err, req, res, next) => {
   console.error(err);
-  // Importante: Vercel necesita que el error también devuelva cabeceras CORS
-  res.header("Access-Control-Allow-Origin", "https://auraa-nu.vercel.app");
+  const origin = req.headers.origin;
+
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  }
+
   res.status(500).json({ ok: false, message: 'Error del servidor', details: err.message });
 });
 
