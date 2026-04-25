@@ -43,16 +43,30 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+const envOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.ALLOWED_ORIGINS
+]
+  .filter(Boolean)
+  .flatMap((item) => item.split(',').map((origin) => origin.trim()))
+  .filter(Boolean);
+
 const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'https://auraa-nu.vercel.app',
-  process.env.FRONTEND_URL
+  'https://auraa-jgxs2sm3z-yisus-projects-babd5615.vercel.app',
+  ...envOrigins
 ].filter(Boolean);
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    const originAllowed =
+      !origin ||
+      allowedOrigins.includes(origin) ||
+      /^https:\/\/auraa-[\w-]+\.vercel\.app$/.test(origin);
+
+    if (originAllowed) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
