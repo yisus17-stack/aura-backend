@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const Personaje = require('../models/Personaje');
+const supabaseClient = require('../config/db');
 const { registrarLog } = require('../utils/logger');
 
 // Tu función auxiliar está excelente, la mantenemos
@@ -17,8 +17,20 @@ const getEmailFromRequest = (req) => {
 };
 
 const getPersonajes = async (req, res) => {
+  const supabase = supabaseClient();
+
+  if (!supabase) {
+    return res.status(503).json({ message: 'La base de datos no está disponible' });
+  }
+
   try {
-    const data = await Personaje.find();
+    const { data, error } = await supabase
+      .from('personajes')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
     registrarLog('GET_PERSONAJES', getEmailFromRequest(req), 'success');
     res.json(data);
   } catch (error) {
@@ -29,12 +41,24 @@ const getPersonajes = async (req, res) => {
 };
 
 const getPersonajeById = async (req, res) => {
+  const supabase = supabaseClient();
+
+  if (!supabase) {
+    return res.status(503).json({ message: 'La base de datos no está disponible' });
+  }
+
   try {
-    const data = await Personaje.findById(req.params.id);
-    if (!data) {
-      registrarLog('GET_PERSONAJE_DETAIL', getEmailFromRequest(req), 'warning', `No encontrado: ${req.params.id}`);
+    const { data, error } = await supabase
+      .from('personajes')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error && error.code === 'PGRST116') {
       return res.status(404).json({ message: 'No existe el personaje' });
     }
+    if (error) throw error;
+
     registrarLog('GET_PERSONAJE_DETAIL', getEmailFromRequest(req), 'success', `Consultado: ${data.nombre}`);
     res.json(data);
   } catch (error) {
@@ -45,12 +69,23 @@ const getPersonajeById = async (req, res) => {
 };
 
 const createPersonaje = async (req, res) => {
+  const supabase = supabaseClient();
+
+  if (!supabase) {
+    return res.status(503).json({ message: 'La base de datos no está disponible' });
+  }
+
   try {
-    const nuevo = new Personaje(req.body);
-    await nuevo.save();
-    // Usamos getEmailFromRequest para evitar errores de undefined
-    registrarLog('CREATE_PERSONAJE', getEmailFromRequest(req), 'success', `Creado: ${nuevo.nombre}`);
-    res.status(201).json(nuevo);
+    const { data, error } = await supabase
+      .from('personajes')
+      .insert([req.body])
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    registrarLog('CREATE_PERSONAJE', getEmailFromRequest(req), 'success', `Creado: ${data.nombre}`);
+    res.status(201).json(data);
   } catch (error) {
     console.error('🔴 Error en CREATE_PERSONAJE:', error.message);
     registrarLog('CREATE_PERSONAJE', getEmailFromRequest(req), 'error', error.message);
@@ -59,13 +94,26 @@ const createPersonaje = async (req, res) => {
 };
 
 const deletePersonaje = async (req, res) => {
+  const supabase = supabaseClient();
+
+  if (!supabase) {
+    return res.status(503).json({ message: 'La base de datos no está disponible' });
+  }
+
   try {
-    const eliminado = await Personaje.findByIdAndDelete(req.params.id);
-    if (!eliminado) {
+    const { data, error } = await supabase
+      .from('personajes')
+      .delete()
+      .eq('id', req.params.id)
+      .single();
+
+    if (error && error.code === 'PGRST116') {
       return res.status(404).json({ message: 'No se encontró el personaje para eliminar' });
     }
+    if (error) throw error;
+
     registrarLog('DELETE_PERSONAJE', getEmailFromRequest(req), 'success', `ID eliminado: ${req.params.id}`);
-    res.json({ mensaje: 'Eliminado correctamente' });
+    res.json({ mensaje: 'Eliminado correctamente', data });
   } catch (error) {
     console.error('🔴 Error en DELETE_PERSONAJE:', error.message);
     registrarLog('DELETE_PERSONAJE', getEmailFromRequest(req), 'error', error.message);

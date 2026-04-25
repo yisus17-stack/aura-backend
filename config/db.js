@@ -1,52 +1,27 @@
-const mongoose = require('mongoose');
+const { createClient } = require('@supabase/supabase-js');
 
-// Configuración de caché para evitar múltiples conexiones en Vercel
-let cached = global.mongoose;
+let supabase = null;
 
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
+const connectDB = () => {
+  if (supabase) return supabase;
 
-const connectDB = async () => {
-  // 1. Reutilizar conexión si existe
-  if (cached.conn) {
-    console.log('🟢 Usando conexión existente (caché)');
-    return cached.conn;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_KEY;
+
+  if (!url || !key) {
+    console.error('⚠️ SUPABASE_URL o SUPABASE_KEY no configurados.');
+    return null;
   }
 
-  // 2. Si no hay promesa de conexión, crearla con lógica de reintento
-  if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-      serverSelectionTimeoutMS: 10000, // Aumentado a 10s para dar margen
-      socketTimeoutMS: 45000,
-      family: 4,                      // Forzar IPv4 para evitar errores de DNS en Atlas
-      maxPoolSize: 1,                 // Optimizado para Serverless
-    };
+  supabase = createClient(url, key, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
 
-    console.log('⏳ Estableciendo nueva conexión con MongoDB Atlas...');
-
-    // Lógica de reintento: Si falla, limpia la promesa para que el próximo request intente de nuevo
-    cached.promise = mongoose.connect(process.env.MONGODB_URI, opts)
-      .then((mongooseInstance) => {
-        return mongooseInstance;
-      })
-      .catch((err) => {
-        cached.promise = null; // Limpiar caché si falla
-        console.error('🔴 Error crítico al conectar a Mongo:', err.message);
-        throw err;
-      });
-  }
-
-  try {
-    cached.conn = await cached.promise;
-    console.log('🟢 Mongo conectado con éxito');
-  } catch (e) {
-    cached.conn = null;
-    throw e;
-  }
-
-  return cached.conn;
+  console.log('🟢 Supabase cliente inicializado');
+  return supabase;
 };
 
 module.exports = connectDB;

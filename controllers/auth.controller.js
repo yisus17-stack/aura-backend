@@ -1,23 +1,27 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const mongoose = require('mongoose'); // Importamos mongoose para checar el estado
-const Usuario = require('../models/Usuario');
+const supabaseClient = require('../config/db');
 const { registrarLog } = require('../utils/logger');
 
 const login = async (req, res) => {
   const { email, password } = req.body;
+  const supabase = supabaseClient();
 
-  // --- BLINDAJE PARA VERCEL ---
-  // Si no hay conexión, respondemos rápido para evitar el timeout del navegador
-  if (mongoose.connection.readyState !== 1) {
-    console.error('🔴 LOGIN FALLIDO: No hay conexión a MongoDB');
-    return res.status(503).json({ 
-      error: 'La base de datos no está lista. Reintenta en unos segundos.' 
-    });
+  if (!supabase) {
+    console.error('🔴 LOGIN FALLIDO: Supabase no inicializado');
+    return res.status(503).json({ error: 'La base de datos no está disponible' });
   }
 
   try {
-    const usuario = await Usuario.findOne({ email });
+    const { data: usuario, error } = await supabase
+      .from('usuarios')
+      .select('id, nombre, email, password, rol')
+      .eq('email', email)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
 
     if (!usuario) {
       registrarLog('LOGIN', email, 'error', 'Usuario no encontrado');
@@ -33,7 +37,7 @@ const login = async (req, res) => {
 
     const token = jwt.sign(
       {
-        id: usuario._id,
+        id: usuario.id,
         email: usuario.email,
         rol: usuario.rol
       },
@@ -41,7 +45,7 @@ const login = async (req, res) => {
       { expiresIn: '1h' }
     );
 
-    registrarLog('LOGIN', usuario.email, 'success', 'Inicio de sesion correcto');
+    registrarLog('LOGIN', usuario.email, 'success', 'Inicio de sesión correcto');
 
     res.json({
       nombre: usuario.nombre,
@@ -58,16 +62,23 @@ const login = async (req, res) => {
 
 const register = async (req, res) => {
   const { nombre, email, password } = req.body;
+  const supabase = supabaseClient();
 
-  // --- BLINDAJE PARA VERCEL ---
-  if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({ 
-      error: 'Servicio temporalmente no disponible (DB)' 
-    });
+  if (!supabase) {
+    console.error('🔴 REGISTER FALLIDO: Supabase no inicializado');
+    return res.status(503).json({ error: 'La base de datos no está disponible' });
   }
 
   try {
-    const existe = await Usuario.findOne({ email });
+    const { data: existe, error: queryError } = await supabase
+      .from('usuarios')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (queryError && queryError.code !== 'PGRST116') {
+      throw queryError;
+    }
 
     if (existe) {
       registrarLog('REGISTER', email, 'warning', 'Intento de registro duplicado');
@@ -76,20 +87,26 @@ const register = async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
 
-    const nuevoUsuario = new Usuario({
-      nombre,
-      email,
-      password: hash,
-      rol: 'user'
-    });
+    const { data: nuevoUsuario, error: insertError } = await supabase
+      .from('usuarios')
+      .insert([
+        {
+          nombre,
+          email,
+          password: hash,
+          rol: 'user'
+        }
+      ])
+      .select('id, nombre, email, rol')
+      .single();
 
-    await nuevoUsuario.save();
+    if (insertError) {
+      throw insertError;
+    }
 
     registrarLog('REGISTER', nuevoUsuario.email, 'success', 'Usuario creado correctamente');
 
-    res.json({
-      message: 'Usuario creado correctamente'
-    });
+    res.json({ message: 'Usuario creado correctamente' });
   } catch (error) {
     console.error('🔴 Error en REGISTER:', error.message);
     registrarLog('REGISTER', email, 'error', `Error servidor: ${error.message}`);
