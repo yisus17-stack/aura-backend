@@ -6,10 +6,17 @@
       "use": "@vercel/node"
     }
   ],
+  "functions": {
+    "index.js": {
+      "maxDuration": 15,
+      "memory": 1024
+    }
+  },
   "routes": [
     {
       "src": "/images/(.*)",
-      "dest": "index.js"
+      "headers": { "cache-control": "public, max-age=86400" },
+      "continue": true
     },
     {
       "src": "/api/(.*)",
