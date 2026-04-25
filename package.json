@@ -22,5 +22,8 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0"
   }
 }
