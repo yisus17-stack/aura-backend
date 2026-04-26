@@ -44,6 +44,10 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Middleware de logs automático
+const logsMiddleware = require('./middleware/logs.middleware');
+app.use(logsMiddleware);
+
 // --- CORS ---
 const allowedOrigins = [
   'http://localhost:5173',
