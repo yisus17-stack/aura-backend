@@ -2,13 +2,17 @@ const express = require('express');
 const router = express.Router();
 const { obtenerLogs } = require('../utils/logger');
 const verificarToken = require('../middleware/auth.middleware');
-const OWNER_EMAIL = 'esquivelyisus17@gmail.com';
+const OWNER_EMAIL = process.env.OWNER_EMAIL;
 
 // Agrégale el middleware aquí
 router.get('/', verificarToken, async (req, res) => {
-  // 🛡️ Solo los admins pueden ver los logs
-  if (!req.user.rol || req.user.rol.toLowerCase() !== 'admin') {
-    return res.status(403).json({ error: 'No tienes permisos de administrador' });
+  const userRole = (req.user.rol || '').toLowerCase().trim();
+  const userEmail = req.user.email;
+
+  // 🛡️ Solo los admins o el dueño pueden ver los logs
+  if (userRole !== 'admin' && userEmail !== OWNER_EMAIL) {
+    console.warn(`🚫 Acceso denegado a logs para: ${userEmail} (Rol: ${userRole})`);
+    return res.status(403).json({ error: 'No tienes permisos de administrador para ver los registros' });
   }
 
   try {
@@ -24,11 +28,11 @@ router.get('/', verificarToken, async (req, res) => {
 router.delete('/', verificarToken, async (req, res) => {
   const requesterEmail = req.user.email;
 
-  // 🛡️ SOLO EL DUEÑO PUEDE LIMPIAR LOS LOGS
-  if (requesterEmail !== OWNER_EMAIL) {
+  // 🛡️ Solo los admins pueden limpiar los logs
+  if (!req.user.rol || req.user.rol.toLowerCase() !== 'admin') {
     const { registrarLog: regLogViolation } = require('../utils/logger');
-    regLogViolation('SECURITY_VIOLATION', requesterEmail, 'warning', 'Intento de limpieza de logs sin ser Super Admin');
-    return res.status(403).json({ error: 'Solo el Super Admin puede limpiar el historial' });
+    regLogViolation('SECURITY_VIOLATION', requesterEmail, 'warning', 'Intento de limpieza de logs sin ser Admin');
+    return res.status(403).json({ error: 'Solo los administradores pueden limpiar el historial' });
   }
 
   try {
@@ -37,7 +41,7 @@ router.delete('/', verificarToken, async (req, res) => {
 
     // Borra todo lo que tenga un ID mayor a 0 (es decir, todo)
     const { error } = await supabase.from('logs').delete().gt('id', 0);
-    
+
     if (error) throw error;
 
     const { registrarLog } = require('../utils/logger');

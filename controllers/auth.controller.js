@@ -145,7 +145,21 @@ const getProfile = async (req, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    res.json(usuario);
+    // 🚀 GENERAMOS UN TOKEN FRESCO (para que si cambió el rol, se actualice sin re-loguear)
+    const token = jwt.sign(
+      {
+        id: usuario.id,
+        email: usuario.email,
+        rol: usuario.rol
+      },
+      process.env.JWT_SECRET || 'secreto_super_pro',
+      { expiresIn: '1h' }
+    );
+
+    res.json({
+      ...usuario,
+      token
+    });
   } catch (error) {
     console.error('🔴 Error en GET_PROFILE:', error.message);
     res.status(500).json({ error: 'Error al obtener perfil' });
