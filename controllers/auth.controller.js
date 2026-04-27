@@ -2,6 +2,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const supabaseClient = require('../config/db');
 const { registrarLog } = require('../utils/logger');
+// Versión restaurada - Limpieza de Supabase Auth
+
 
 const login = async (req, res) => {
   const { email, password } = req.body;
