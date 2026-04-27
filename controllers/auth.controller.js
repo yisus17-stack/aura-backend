@@ -105,9 +105,24 @@ const register = async (req, res) => {
       throw insertError;
     }
 
-    registrarLog('REGISTER', nuevoUsuario.email, 'success', 'Usuario creado correctamente');
+    const token = jwt.sign(
+      {
+        id: nuevoUsuario.id,
+        email: nuevoUsuario.email,
+        rol: nuevoUsuario.rol
+      },
+      process.env.JWT_SECRET || 'secreto_super_pro',
+      { expiresIn: '1h' }
+    );
 
-    res.json({ message: 'Usuario creado correctamente' });
+    registrarLog('REGISTER', nuevoUsuario.email, 'success', 'Usuario creado e inicio de sesión automático');
+
+    res.json({
+      nombre: nuevoUsuario.nombre,
+      email: nuevoUsuario.email,
+      rol: nuevoUsuario.rol,
+      token
+    });
   } catch (error) {
     console.error('🔴 Error en REGISTER:', error.message);
     registrarLog('REGISTER', email, 'error', `Error servidor: ${error.message}`);
