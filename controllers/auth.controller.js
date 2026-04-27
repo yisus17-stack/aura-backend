@@ -115,7 +115,30 @@ const register = async (req, res) => {
   }
 };
 
+const getProfile = async (req, res) => {
+  const supabase = supabaseClient();
+  if (!supabase) return res.status(503).json({ error: 'La base de datos no está disponible' });
+
+  try {
+    const { data: usuario, error } = await supabase
+      .from('usuarios')
+      .select('id, nombre, email, rol')
+      .eq('id', req.user.id)
+      .single();
+
+    if (error || !usuario) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json(usuario);
+  } catch (error) {
+    console.error('🔴 Error en GET_PROFILE:', error.message);
+    res.status(500).json({ error: 'Error al obtener perfil' });
+  }
+};
+
 module.exports = {
   login,
-  register
+  register,
+  getProfile
 };
