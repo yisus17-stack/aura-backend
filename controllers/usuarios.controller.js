@@ -1,7 +1,7 @@
 const supabaseClient = require('../config/db');
 const { registrarLog } = require('../utils/logger');
 
-const OWNER_EMAIL = 'esquivelyisus17@gmail.com';
+const OWNER_EMAIL = process.env.OWNER_EMAIL;
 
 exports.getUsuarios = async (req, res) => {
   const supabase = supabaseClient();
