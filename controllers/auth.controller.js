@@ -147,13 +147,9 @@ const getProfile = async (req, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    // 🚀 GENERAMOS UN TOKEN FRESCO (para que si cambió el rol, se actualice sin re-loguear)
+    // 🚀 TOKEN FRESCO: Para que los cambios de rol sean instantáneos
     const token = jwt.sign(
-      {
-        id: usuario.id,
-        email: usuario.email,
-        rol: usuario.rol
-      },
+      { id: usuario.id, email: usuario.email, rol: usuario.rol },
       process.env.JWT_SECRET || 'secreto_super_pro',
       { expiresIn: '1h' }
     );
