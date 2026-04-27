@@ -1,14 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const { obtenerLogs } = require('../utils/logger');
-const verificarToken = require('../middleware/auth.middleware'); // <-- Importalo
+const verificarToken = require('../middleware/auth.middleware');
+const OWNER_EMAIL = 'esquivelyisus17@gmail.com';
 
 // Agrégale el middleware aquí
 router.get('/', verificarToken, async (req, res) => {
-  // PLUS: Validación de admin temporalmente deshabilitada para depuración
-  // if (!req.user.rol || req.user.rol.toLowerCase() !== 'admin') {
-  //   return res.status(403).json({ error: 'No tienes permisos de administrador' });
-  // }
+  // 🛡️ Solo los admins pueden ver los logs
+  if (!req.user.rol || req.user.rol.toLowerCase() !== 'admin') {
+    return res.status(403).json({ error: 'No tienes permisos de administrador' });
+  }
 
   try {
     const logs = await obtenerLogs(req.query.limit);
@@ -21,9 +22,13 @@ router.get('/', verificarToken, async (req, res) => {
 
 // Ruta para limpiar todos los logs (Botón de borrar logs)
 router.delete('/', verificarToken, async (req, res) => {
-  // Asegurarnos de que sea admin el que limpia
-  if (!req.user.rol || req.user.rol.toLowerCase() !== 'admin') {
-    return res.status(403).json({ error: 'No tienes permisos' });
+  const requesterEmail = req.user.email;
+
+  // 🛡️ SOLO EL DUEÑO PUEDE LIMPIAR LOS LOGS
+  if (requesterEmail !== OWNER_EMAIL) {
+    const { registrarLog: regLogViolation } = require('../utils/logger');
+    regLogViolation('SECURITY_VIOLATION', requesterEmail, 'warning', 'Intento de limpieza de logs sin ser Super Admin');
+    return res.status(403).json({ error: 'Solo el Super Admin puede limpiar el historial' });
   }
 
   try {
@@ -36,7 +41,7 @@ router.delete('/', verificarToken, async (req, res) => {
     if (error) throw error;
 
     const { registrarLog } = require('../utils/logger');
-    registrarLog('CLEAR_LOGS', req.user.email, 'success', 'Limpió el historial de logs');
+    registrarLog('CLEAR_LOGS', requesterEmail, 'success', 'Limpió el historial de logs');
 
     res.json({ message: 'Logs limpiados' });
   } catch (error) {
