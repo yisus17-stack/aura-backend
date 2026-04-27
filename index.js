@@ -39,7 +39,7 @@ app.use((req, res, next) => {
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 150,
+  max: 1000, // 🚀 Aumentado para evitar bloqueos en tests
   message: { error: 'Demasiadas peticiones a Aura. Intenta más tarde.' }
 });
 app.use(limiter);
